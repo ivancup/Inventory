@@ -1,0 +1,6 @@
+services:
+  inventory:
+    image: ${DOCKER_REGISTRY-}inventory
+    build:
+      context: .
+      dockerfile: Inventory/Dockerfile
