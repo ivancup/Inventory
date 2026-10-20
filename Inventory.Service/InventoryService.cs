@@ -177,9 +177,12 @@ public sealed class InventoryService(
 
     private static void ValidatePage(int page, int pageSize)
     {
-        if (page < 1 || pageSize < 1 || pageSize > 100)
+        if (page < 1
+            || pageSize < 1
+            || pageSize > 100
+            || (long)(page - 1) * pageSize > int.MaxValue)
         {
-            throw new InventoryException(400, "invalid_pagination", "Page must be positive and page size must be between 1 and 100.");
+            throw new InventoryException(400, "invalid_pagination", "Page and page size must produce a supported offset; page size must be between 1 and 100.");
         }
     }
 }

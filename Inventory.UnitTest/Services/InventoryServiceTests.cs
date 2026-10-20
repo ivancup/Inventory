@@ -135,6 +135,26 @@ public sealed class InventoryServiceTests
     }
 
     [TestMethod]
+    public async Task AuditQuery_RejectsPageThatOverflowsOffset()
+    {
+        var exception = await Assert.ThrowsAsync<InventoryException>(
+            () => service.GetAuditLogsAsync(21_474_838, 100, CancellationToken.None));
+
+        Assert.AreEqual("invalid_pagination", exception.Code);
+        repository.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
+    public async Task MovementQuery_RejectsPageThatOverflowsOffset()
+    {
+        var exception = await Assert.ThrowsAsync<InventoryException>(
+            () => service.GetMovementsAsync(null, 21_474_838, 100, CancellationToken.None));
+
+        Assert.AreEqual("invalid_pagination", exception.Code);
+        repository.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
     public async Task GetProduct_ReturnsNotFoundWhenMissing()
     {
         repository.Setup(item => item.GetProductAsync(99, It.IsAny<CancellationToken>()))
