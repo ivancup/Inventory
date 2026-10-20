@@ -35,10 +35,9 @@ Start in the repository root:
 .\scripts\start-local.ps1 -Detached
 docker compose ps
 Invoke-RestMethod http://localhost:8081/health
-Invoke-RestMethod http://localhost:8081/api/v1/categories
 ```
 
-For the script/regular Compose launch, continue only when `inventory`, `sqlserver`, and `keycloak` all show `healthy` and the health/read requests succeed. In Visual Studio debug mode, its generated container waits for Visual Studio to launch the API process, so the API's Compose healthcheck is disabled by `docker-compose.vs.debug.yml`; wait for SQL Server and Keycloak to show `healthy`, then verify `http://localhost:8081/health` and a read endpoint. Containers showing `running` alone is not readiness.
+For the script/regular Compose launch, continue only when `inventory`, `sqlserver`, and `keycloak` all show `healthy` and the health request succeeds. All API endpoints other than `/health` require a bearer token; use the authenticated requests in `Inventory.Api\Inventory.http` to check read routes. In Visual Studio debug mode, its generated container waits for Visual Studio to launch the API process, so the API's Compose healthcheck is disabled by `docker-compose.vs.debug.yml`; wait for SQL Server and Keycloak to show `healthy`, then verify `http://localhost:8081/health` and an authenticated read endpoint. Containers showing `running` alone is not readiness.
 
 Visual Studio can also start the solution's **Docker Compose** profile directly: Compose supplies the same fixed local-only defaults when no shell environment variables are set, so Visual Studio does not need to run `scripts/start-local.ps1` first. Set `docker-compose` as the only startup project; do not also start `Inventory.Api` with its Dockerfile profile. The script remains useful for explicit CLI startup and shutdown.
 
@@ -79,22 +78,29 @@ Keep `Microsoft.EntityFrameworkCore.Design` referenced by both the API startup p
 
 ## Keycloak and API routes
 
-Compose imports realm `inventory`, client `inventory-api`, and the local API test user `inventory-user` / `InventoryUser_2026!`. The Keycloak admin login (`local-admin`) is a separate account in the `master` realm and cannot be substituted in the inventory realm token request. These fixed credentials are for isolated local development only. Protected routes require a bearer token. The application preserves the raw JWT `sub` claim; on the first write it associates that subject, name, and email with a `User` row. It does not store passwords.
+Compose imports realm `inventory`, client `inventory-api`, and the local API test user `inventory-user` / `InventoryUser_2026!`. The Keycloak admin login (`local-admin`) is a separate account in the `master` realm and cannot be substituted in the inventory realm token request. These fixed credentials are for isolated local development only. Every API endpoint requires a bearer token from an authenticated user with a `sub` claim, except `GET /health`. A fallback authorization policy protects endpoints even when they do not have explicit authorization attributes. The application preserves the raw JWT `sub` claim; on the first write it associates that subject, name, and email with a `User` row. It does not store passwords.
 
 | Method | Route | Access | Purpose |
 | --- | --- | --- | --- |
-| GET | `/api/v1/products` and `/api/v1/products/{id}` | Anonymous | List/retrieve products; list accepts `includeDeleted`. |
-| POST | `/api/v1/products` | Bearer token | Create product. |
-| PUT, DELETE | `/api/v1/products/{id}` | Bearer token | Update product or soft-delete it. Delete records a zero-quantity movement and preserves stock. |
-| GET | `/api/v1/categories` | Anonymous | List categories. |
-| PUT | `/api/v1/categories/{id}` | Bearer token | Update category name. |
+| GET | `/health` | Anonymous | Service health status. |
+| GET | `/api/v1/products` | Bearer token | List products; supports `includeDeleted=true`. |
+| GET | `/api/v1/products/{id}` | Bearer token | Retrieve a product by ID. |
+| POST | `/api/v1/products` | Bearer token | Create a product. |
+| PUT | `/api/v1/products/{id}` | Bearer token | Update a product's name and category. |
+| DELETE | `/api/v1/products/{id}` | Bearer token | Soft-delete a product; records a zero-quantity movement and preserves stock. |
+| GET | `/api/v1/categories` | Bearer token | List categories. |
+| POST | `/api/v1/categories` | Bearer token | Create a category. |
+| PUT | `/api/v1/categories/{id}` | Bearer token | Update a category name. |
+| DELETE | `/api/v1/categories/{id}` | Bearer token | Delete a category only when no products reference it. |
 | GET | `/api/v1/movements` | Bearer token | List movements with optional `productId`, `page`, and `pageSize`. |
-| POST | `/api/v1/movements/add`, `/api/v1/movements/remove` | Bearer token | Apply stock movement. |
-| GET | `/api/v1/audit-logs?page=1&pageSize=50` | Bearer token | Retrieve paginated audit records. |
+| POST | `/api/v1/movements/add` | Bearer token | Add stock to a product. |
+| POST | `/api/v1/movements/remove` | Bearer token | Remove stock from a product. |
+| GET | `/api/v1/audit-logs` | Bearer token | Retrieve paginated audit records with `page` and `pageSize`. |
+| GET | `/openapi/v1.json` (Development only) | Bearer token | OpenAPI document. |
 
 OpenAPI is available in Development at `/openapi/v1.json`. Add/remove writes, movement rows, and corresponding audit JSON are committed in one transaction. `Inventory` and `AuditLogs` must remain on the same SQL Server instance for this transaction boundary.
 
-`Inventory.Api\Inventory.http` contains a Visual Studio-compatible request sequence for health, token acquisition, every API endpoint, and bearer-authenticated mutations. It calls the API through `http://127.0.0.1:8081` and Keycloak through `http://127.0.0.1:8080`; both are published host ports, not Compose-only service names. Using explicit IPv4 loopback addresses avoids `localhost` IPv4/IPv6 or proxy-resolution differences in HTTP clients. Run **Get Keycloak access token** first; later requests read the token from the named response using Visual Studio's `{{login.response.body.$.access_token}}` syntax. Run **Create product** before the requests that use its returned product ID. Browser REST requests to `localhost` do not require the `keycloak` hosts-file entry; that mapping is only needed when a host-side OIDC flow follows Keycloak's configured issuer hostname.
+`Inventory.Api\Inventory.http` contains a Visual Studio-compatible request sequence for health, token acquisition, and every API endpoint. It calls the API through `http://127.0.0.1:8081` and Keycloak through `http://127.0.0.1:8080`; both are published host ports, not Compose-only service names. Using explicit IPv4 loopback addresses avoids `localhost` IPv4/IPv6 or proxy-resolution differences in HTTP clients. Run **Get Keycloak access token** first; later requests read the token from the named response using Visual Studio's `{{login.response.body.$.access_token}}` syntax. Run **Create category** before **Create product**; run **Soft-delete the created product** before **Delete category**. Browser REST requests to `localhost` do not require the `keycloak` hosts-file entry; that mapping is only needed when a host-side OIDC flow follows Keycloak's configured issuer hostname.
 
 ## Validation and tests
 

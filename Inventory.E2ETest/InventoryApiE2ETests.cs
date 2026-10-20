@@ -13,19 +13,27 @@ public sealed class InventoryApiE2ETests
         new(Environment.GetEnvironmentVariable("INVENTORY_API_BASE_URL") ?? "http://127.0.0.1:8081");
 
     [TestMethod]
-    public async Task HealthAndReadEndpoints_AreAvailable()
+    public async Task OnlyHealthIsAvailableWithoutAuthentication()
     {
         using var client = new HttpClient { BaseAddress = BaseAddress };
 
         var health = await client.GetAsync("/health");
-        var products = await client.GetAsync("/api/v1/products");
-        var categories = await client.GetAsync("/api/v1/categories");
 
         Assert.AreEqual(HttpStatusCode.OK, health.StatusCode);
-        Assert.AreEqual(HttpStatusCode.OK, products.StatusCode);
-        Assert.AreEqual(HttpStatusCode.OK, categories.StatusCode);
-        Assert.IsNotEmpty(await products.Content.ReadAsStringAsync());
-        Assert.IsNotEmpty(await categories.Content.ReadAsStringAsync());
+
+        var protectedEndpoints = new[]
+        {
+            "/api/v1/products",
+            "/api/v1/products/1",
+            "/api/v1/categories",
+            "/api/v1/movements?page=1&pageSize=50",
+            "/api/v1/audit-logs?page=1&pageSize=50"
+        };
+        foreach (var endpoint in protectedEndpoints)
+        {
+            using var response = await client.GetAsync(endpoint);
+            Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode, endpoint);
+        }
     }
 
     [TestMethod]
@@ -57,6 +65,9 @@ public sealed class InventoryApiE2ETests
 
         using var client = new HttpClient { BaseAddress = BaseAddress };
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var categories = await client.GetAsync("/api/v1/categories");
+        Assert.AreEqual(HttpStatusCode.OK, categories.StatusCode);
 
         var categoryName = $"E2E category {Guid.NewGuid():N}";
         var categoryResponse = await client.PostAsJsonAsync(

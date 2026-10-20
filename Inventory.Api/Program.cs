@@ -4,6 +4,7 @@ using Inventory.Repository.Data;
 using Inventory.Service;
 using Inventory.Service.Interfaces;
 using Inventory.Service.Observability;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Logs;
@@ -35,11 +36,12 @@ builder.Services
     });
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("InventoryWrite", policy =>
-    {
-        policy.RequireAuthenticatedUser();
-        policy.RequireClaim("sub");
-    });
+    var authenticatedInventoryUser = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .RequireClaim("sub")
+        .Build();
+    options.AddPolicy("InventoryWrite", authenticatedInventoryUser);
+    options.FallbackPolicy = authenticatedInventoryUser;
 });
 
 builder.Logging.AddOpenTelemetry(options =>

@@ -13,7 +13,6 @@ public sealed class ProductsController(IInventoryService inventoryService) : Con
 {
     /// <summary>Returns products, optionally including soft-deleted records.</summary>
     [HttpGet]
-    [AllowAnonymous]
     public Task<IReadOnlyList<ProductResponse>> GetProducts(
         [FromQuery] bool includeDeleted = false,
         CancellationToken cancellationToken = default) =>
@@ -21,7 +20,6 @@ public sealed class ProductsController(IInventoryService inventoryService) : Con
 
     /// <summary>Returns a product by its identifier.</summary>
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
     public Task<ProductResponse> GetProduct(int id, CancellationToken cancellationToken) =>
         inventoryService.GetProductAsync(id, cancellationToken);
 

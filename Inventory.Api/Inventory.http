@@ -22,19 +22,43 @@ grant_type=password&client_id={{clientId}}&username={{username}}&password={{pass
 
 ### List products
 GET {{api}}/api/v1/products
+Authorization: Bearer {{login.response.body.$.access_token}}
 Accept: application/json
 
 ### List products including soft-deleted products
 GET {{api}}/api/v1/products?includeDeleted=true
+Authorization: Bearer {{login.response.body.$.access_token}}
 Accept: application/json
 
 ### Get product by ID
 GET {{api}}/api/v1/products/1
+Authorization: Bearer {{login.response.body.$.access_token}}
 Accept: application/json
 
 ### List categories
 GET {{api}}/api/v1/categories
+Authorization: Bearer {{login.response.body.$.access_token}}
 Accept: application/json
+
+### Create category
+# Run before Create product; the product initially uses this category.
+# @name createCategory
+POST {{api}}/api/v1/categories
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test category"
+}
+
+### Update category
+PUT {{api}}/api/v1/categories/{{createCategory.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test category (updated)"
+}
 
 ### Create product
 # Run this request before the update and movement requests that use its response ID.
@@ -45,7 +69,7 @@ Content-Type: application/json
 
 {
   "name": "HTTP test product",
-  "productCategoryId": 1
+  "productCategoryId": {{createCategory.response.body.$.id}}
 }
 
 ### Update product
@@ -56,16 +80,6 @@ Content-Type: application/json
 {
   "name": "HTTP test product (updated)",
   "productCategoryId": 2
-}
-
-### Update product category
-# Seed data includes category 2 ("Electronics"); keep the name unique.
-PUT {{api}}/api/v1/categories/2
-Authorization: Bearer {{login.response.body.$.access_token}}
-Content-Type: application/json
-
-{
-  "name": "Electronics"
 }
 
 ### Add stock
@@ -106,5 +120,11 @@ Accept: application/json
 ### Soft-delete the created product
 # This records a Delete movement with quantity zero and preserves on-hand stock.
 DELETE {{api}}/api/v1/products/{{createProduct.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+Accept: application/json
+
+### Delete category
+# The created product has been moved to category 2 and soft-deleted above.
+DELETE {{api}}/api/v1/categories/{{createCategory.response.body.$.id}}
 Authorization: Bearer {{login.response.body.$.access_token}}
 Accept: application/json

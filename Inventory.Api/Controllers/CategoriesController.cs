@@ -13,7 +13,6 @@ public sealed class CategoriesController(IInventoryService inventoryService) : C
 {
     /// <summary>Returns all product categories.</summary>
     [HttpGet]
-    [AllowAnonymous]
     public Task<IReadOnlyList<CategoryResponse>> GetCategories(CancellationToken cancellationToken) =>
         inventoryService.GetCategoriesAsync(cancellationToken);
 
