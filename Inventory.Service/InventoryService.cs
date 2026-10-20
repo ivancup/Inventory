@@ -77,6 +77,16 @@ public sealed class InventoryService(
         return repository.UpdateProductAsync(id, request with { Name = request.Name.Trim() }, actor, cancellationToken);
     }
 
+    public Task<CategoryResponse> CreateCategoryAsync(
+        CategoryWriteRequest request,
+        ActorIdentity actor,
+        CancellationToken cancellationToken)
+    {
+        ValidateCategory(request);
+        ValidateActor(actor);
+        return repository.CreateCategoryAsync(request with { Name = request.Name.Trim() }, actor, cancellationToken);
+    }
+
     public Task<CategoryResponse> UpdateCategoryAsync(
         int id,
         CategoryWriteRequest request,
@@ -88,13 +98,23 @@ public sealed class InventoryService(
             throw new InventoryException(400, "invalid_category_id", "Category id must be greater than zero.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 120)
+        ValidateCategory(request);
+        ValidateActor(actor);
+        return repository.UpdateCategoryAsync(id, request with { Name = request.Name.Trim() }, actor, cancellationToken);
+    }
+
+    public Task<CategoryResponse> DeleteCategoryAsync(
+        int id,
+        ActorIdentity actor,
+        CancellationToken cancellationToken)
+    {
+        if (id <= 0)
         {
-            throw new InventoryException(400, "invalid_category_name", "Category name must contain between 1 and 120 characters.");
+            throw new InventoryException(400, "invalid_category_id", "Category id must be greater than zero.");
         }
 
         ValidateActor(actor);
-        return repository.UpdateCategoryAsync(id, request with { Name = request.Name.Trim() }, actor, cancellationToken);
+        return repository.DeleteCategoryAsync(id, actor, cancellationToken);
     }
 
     public async Task<InventoryMovementResponse> AddStockAsync(
@@ -149,6 +169,14 @@ public sealed class InventoryService(
         if (request.ProductCategoryId <= 0)
         {
             throw new InventoryException(400, "invalid_category_id", "Category id must be greater than zero.");
+        }
+    }
+
+    private static void ValidateCategory(CategoryWriteRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 120)
+        {
+            throw new InventoryException(400, "invalid_category_name", "Category name must contain between 1 and 120 characters.");
         }
     }
 

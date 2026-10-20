@@ -19,8 +19,12 @@ public interface IInventoryRepository
     Task<ProductResponse> CreateProductAsync(ProductWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Updates a product and its audit record transactionally.</summary>
     Task<ProductResponse> UpdateProductAsync(int id, ProductWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
+    /// <summary>Creates a category and its audit record transactionally.</summary>
+    Task<CategoryResponse> CreateCategoryAsync(CategoryWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Updates a category and its audit record transactionally.</summary>
     Task<CategoryResponse> UpdateCategoryAsync(int id, CategoryWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
+    /// <summary>Deletes a category and its audit record transactionally.</summary>
+    Task<CategoryResponse> DeleteCategoryAsync(int id, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Applies a stock movement and records its audit data transactionally.</summary>
     Task<InventoryMovementResponse> ApplyMovementAsync(int productId, string type, int quantity, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Soft-deletes a product and records its movement and audit data transactionally.</summary>

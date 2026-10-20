@@ -19,8 +19,12 @@ public interface IInventoryService
     Task<ProductResponse> CreateProductAsync(ProductWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Updates a product and records the acting user and audit data.</summary>
     Task<ProductResponse> UpdateProductAsync(int id, ProductWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
+    /// <summary>Creates a category and records the acting user and audit data.</summary>
+    Task<CategoryResponse> CreateCategoryAsync(CategoryWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Updates a category and records the acting user and audit data.</summary>
     Task<CategoryResponse> UpdateCategoryAsync(int id, CategoryWriteRequest request, ActorIdentity actor, CancellationToken cancellationToken);
+    /// <summary>Deletes a category and records the acting user and audit data.</summary>
+    Task<CategoryResponse> DeleteCategoryAsync(int id, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Adds stock and records the resulting movement.</summary>
     Task<InventoryMovementResponse> AddStockAsync(InventoryMovementRequest request, ActorIdentity actor, CancellationToken cancellationToken);
     /// <summary>Removes stock and records the resulting movement.</summary>

@@ -66,6 +66,8 @@ erDiagram
 
 `ProductCategory` to `Product` is one-to-many. Quantity is nonnegative in both business validation and a SQL check constraint. Products are soft-deleted. A delete creates a `Delete` movement with quantity zero; it does not alter the retained on-hand quantity. OAuth subject IDs are stored as user identity references; passwords are not stored. The `User` row for an authenticated subject is created as part of the first command transaction, and that user creation is audited too.
 
+Categories can be created, renamed, and deleted through the versioned categories API. All category mutations require the `InventoryWrite` policy and are audited transactionally. A category cannot be deleted while any product references it, including soft-deleted products; the API returns a conflict rather than violating the product foreign key.
+
 ## CQRS and audit transaction
 
 ```mermaid

@@ -36,8 +36,14 @@ public sealed class InventoryApiE2ETests
         var response = await client.PostAsJsonAsync(
             "/api/v1/movements/add",
             new InventoryMovementRequest(1, 1));
+        var createCategory = await client.PostAsJsonAsync(
+            "/api/v1/categories",
+            new CategoryWriteRequest($"E2E category {Guid.NewGuid():N}"));
+        var deleteCategory = await client.DeleteAsync("/api/v1/categories/1");
 
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, createCategory.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, deleteCategory.StatusCode);
     }
 
     [TestMethod]
@@ -52,6 +58,15 @@ public sealed class InventoryApiE2ETests
         using var client = new HttpClient { BaseAddress = BaseAddress };
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
+        var categoryName = $"E2E category {Guid.NewGuid():N}";
+        var categoryResponse = await client.PostAsJsonAsync(
+            "/api/v1/categories",
+            new CategoryWriteRequest(categoryName));
+        Assert.AreEqual(HttpStatusCode.Created, categoryResponse.StatusCode);
+        var category = await categoryResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        Assert.IsNotNull(category);
+        Assert.AreEqual(categoryName, category.Name);
+
         var createdResponse = await client.PostAsJsonAsync(
             "/api/v1/products",
             new ProductWriteRequest($"E2E product {Guid.NewGuid():N}", 1));
@@ -62,6 +77,12 @@ public sealed class InventoryApiE2ETests
         var categoryUpdate = await client.PutAsJsonAsync("/api/v1/categories/2", new CategoryWriteRequest("Electronics"));
         Assert.AreEqual(HttpStatusCode.OK, categoryUpdate.StatusCode);
         var productUpdate = await client.PutAsJsonAsync(
+            $"/api/v1/products/{created.Id}",
+            new ProductWriteRequest(created.Name, category.Id));
+        Assert.AreEqual(HttpStatusCode.OK, productUpdate.StatusCode);
+        var categoryInUse = await client.DeleteAsync($"/api/v1/categories/{category.Id}");
+        Assert.AreEqual(HttpStatusCode.Conflict, categoryInUse.StatusCode);
+        productUpdate = await client.PutAsJsonAsync(
             $"/api/v1/products/{created.Id}",
             new ProductWriteRequest(created.Name, 2));
         Assert.AreEqual(HttpStatusCode.OK, productUpdate.StatusCode);
@@ -97,6 +118,11 @@ public sealed class InventoryApiE2ETests
         Assert.AreEqual(0, deleteMovement?.Quantity);
         var missing = await client.GetAsync($"/api/v1/products/{created.Id}");
         Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
+
+        var deletedCategoryResponse = await client.DeleteAsync($"/api/v1/categories/{category.Id}");
+        Assert.AreEqual(HttpStatusCode.OK, deletedCategoryResponse.StatusCode);
+        var deletedCategory = await deletedCategoryResponse.Content.ReadFromJsonAsync<CategoryResponse>();
+        Assert.AreEqual(category, deletedCategory);
     }
 
     [TestMethod]

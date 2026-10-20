@@ -125,6 +125,41 @@ public sealed class InventoryServiceTests
     }
 
     [TestMethod]
+    public async Task CreateCategory_TrimsNameBeforeRepositoryCall()
+    {
+        repository.Setup(item => item.CreateCategoryAsync(
+                new CategoryWriteRequest("Office"),
+                actor,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CategoryResponse(4, "Office"));
+
+        var result = await service.CreateCategoryAsync(new CategoryWriteRequest(" Office "), actor, CancellationToken.None);
+
+        Assert.AreEqual(new CategoryResponse(4, "Office"), result);
+        repository.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task CreateCategory_RejectsBlankNameBeforeRepositoryCall()
+    {
+        var exception = await Assert.ThrowsAsync<InventoryException>(
+            () => service.CreateCategoryAsync(new CategoryWriteRequest(" "), actor, CancellationToken.None));
+
+        Assert.AreEqual("invalid_category_name", exception.Code);
+        repository.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
+    public async Task DeleteCategory_RejectsInvalidIdBeforeRepositoryCall()
+    {
+        var exception = await Assert.ThrowsAsync<InventoryException>(
+            () => service.DeleteCategoryAsync(0, actor, CancellationToken.None));
+
+        Assert.AreEqual("invalid_category_id", exception.Code);
+        repository.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
     public async Task AuditQuery_RejectsPageSizeOverMaximum()
     {
         var exception = await Assert.ThrowsAsync<InventoryException>(

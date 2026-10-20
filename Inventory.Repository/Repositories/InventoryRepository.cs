@@ -236,6 +236,85 @@ public sealed class InventoryRepository(
         return updated;
     }
 
+    public async Task<CategoryResponse> CreateCategoryAsync(
+        CategoryWriteRequest request,
+        ActorIdentity actor,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(inventoryConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await EnsureActorAsync(connection, transaction, actor, cancellationToken);
+        var existingCategory = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(
+                "SELECT COUNT(1) FROM dbo.ProductCategory WITH (UPDLOCK, HOLDLOCK) WHERE Name = @Name",
+                new { request.Name },
+                transaction,
+                cancellationToken: cancellationToken));
+        if (existingCategory > 0)
+        {
+            throw new InventoryException(409, "category_name_conflict", "A product category with that name already exists.");
+        }
+
+        var id = await connection.QuerySingleAsync<int>(
+            new CommandDefinition(
+                """
+                INSERT INTO dbo.ProductCategory (Name)
+                OUTPUT INSERTED.Id
+                VALUES (@Name);
+                """,
+                request,
+                transaction,
+                cancellationToken: cancellationToken));
+        var created = new CategoryResponse(id, request.Name);
+        await InsertAuditAsync(connection, transaction, "Created", "ProductCategory", id.ToString(), null, created, actor.Subject, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return created;
+    }
+
+    public async Task<CategoryResponse> DeleteCategoryAsync(
+        int id,
+        ActorIdentity actor,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(inventoryConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await EnsureActorAsync(connection, transaction, actor, cancellationToken);
+        var name = await connection.QuerySingleOrDefaultAsync<string?>(
+            new CommandDefinition(
+                "SELECT Name FROM dbo.ProductCategory WITH (UPDLOCK, HOLDLOCK) WHERE Id = @Id",
+                new { Id = id },
+                transaction,
+                cancellationToken: cancellationToken));
+        if (name is null)
+        {
+            throw new InventoryException(404, "category_not_found", "The product category was not found.");
+        }
+
+        var productCount = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(
+                "SELECT COUNT(1) FROM dbo.Product WITH (UPDLOCK, HOLDLOCK) WHERE ProductCategoryId = @Id",
+                new { Id = id },
+                transaction,
+                cancellationToken: cancellationToken));
+        if (productCount > 0)
+        {
+            throw new InventoryException(409, "category_in_use", "The product category cannot be deleted while products reference it.");
+        }
+
+        var deleted = new CategoryResponse(id, name);
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                "DELETE FROM dbo.ProductCategory WHERE Id = @Id",
+                new { Id = id },
+                transaction,
+                cancellationToken: cancellationToken));
+        await InsertAuditAsync(connection, transaction, "Deleted", "ProductCategory", id.ToString(), deleted, null, actor.Subject, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return deleted;
+    }
+
     public async Task<InventoryMovementResponse> ApplyMovementAsync(
         int productId,
         string type,
