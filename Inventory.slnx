@@ -1,6 +1,19 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="Directory.Packages.props" />
+    <File Path="scripts/start-local.ps1" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="Inventory.E2ETest/Inventory.E2ETest.csproj" Id="fec69404-b846-43b3-b7b4-dbecf354f6d2" />
+    <Project Path="Inventory.UnitTest/Inventory.UnitTest.csproj" Id="13b80469-2490-4829-a6fe-1af8051731ab" />
+  </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>
-  <Project Path="Inventory/Inventory.csproj" />
+  <Project Path="Inventory.Api/Inventory.Api.csproj" />
+  <Project Path="Inventory.Domain/Inventory.Domain.csproj" Id="ee041811-7371-4f1a-8dbb-6d06ae58fb1a" />
+  <Project Path="Inventory.Repository/Inventory.Repository.csproj" Id="6eeb355d-fa1d-4963-8b9c-8579885fa41d" />
+  <Project Path="Inventory.Service/Inventory.Service.csproj" Id="d54912eb-c35e-4ce5-bb3c-ce899c56efa7" />
+  <Project Path="Inventory.Utils/Inventory.Utils.csproj" Id="1ed5c9ff-850e-4bbe-8747-8db3b426d4a9" />
 </Solution>
