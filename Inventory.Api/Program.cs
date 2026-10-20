@@ -1,5 +1,5 @@
-using Inventory.Api.Middleware;
 using Inventory.Api.DependencyInjection;
+using Inventory.Api.Middleware;
 using Inventory.Repository.Data;
 using Inventory.Service;
 using Inventory.Service.Interfaces;
@@ -33,7 +33,14 @@ builder.Services
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.TokenValidationParameters.NameClaimType = "name";
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("InventoryWrite", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("sub");
+    });
+});
 
 builder.Logging.AddOpenTelemetry(options =>
 {

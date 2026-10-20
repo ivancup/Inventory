@@ -2,8 +2,6 @@ using Inventory.Repository.Data;
 using Inventory.Repository.Interfaces;
 using Inventory.Repository.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Inventory.Api.DependencyInjection;
 

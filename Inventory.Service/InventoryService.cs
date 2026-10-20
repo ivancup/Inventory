@@ -104,11 +104,6 @@ public sealed class InventoryService(
     {
         ValidateMovement(request, actor);
         var product = await GetProductAsync(request.ProductId, cancellationToken);
-        if (product.Quantity > int.MaxValue - request.Quantity)
-        {
-            throw new InventoryException(409, "quantity_overflow", "The resulting inventory quantity exceeds the supported limit.");
-        }
-
         var result = await repository.ApplyMovementAsync(request.ProductId, InventoryMovementType.Add, request.Quantity, actor, cancellationToken);
         metrics.RecordAdded(request.Quantity, product.Id, product.ProductCategoryId);
         InventoryLog.InventoryMoved(logger, InventoryMovementType.Add, request.Quantity, product.Id, product.ProductCategoryId);

@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.Api.Controllers;
 
+/// <summary>Exposes inventory movement history and stock-changing operations.</summary>
 [ApiController]
 [Route("api/v1/movements")]
 public sealed class MovementsController(IInventoryService inventoryService) : ControllerBase
 {
+    /// <summary>Returns a page of movement history, optionally filtered by product.</summary>
     [HttpGet]
-    [Authorize]
+    [Authorize(Policy = "InventoryWrite")]
     public Task<IReadOnlyList<InventoryMovementResponse>> GetMovements(
         [FromQuery] int? productId,
         [FromQuery] int page = 1,
@@ -19,15 +21,17 @@ public sealed class MovementsController(IInventoryService inventoryService) : Co
         CancellationToken cancellationToken = default) =>
         inventoryService.GetMovementsAsync(productId, page, pageSize, cancellationToken);
 
+    /// <summary>Adds the requested quantity to a product's stock.</summary>
     [HttpPost("add")]
-    [Authorize]
+    [Authorize(Policy = "InventoryWrite")]
     public Task<InventoryMovementResponse> AddStock(
         InventoryMovementRequest request,
         CancellationToken cancellationToken) =>
         inventoryService.AddStockAsync(request, ActorIdentityFactory.FromPrincipal(User), cancellationToken);
 
+    /// <summary>Removes the requested quantity from a product's stock.</summary>
     [HttpPost("remove")]
-    [Authorize]
+    [Authorize(Policy = "InventoryWrite")]
     public Task<InventoryMovementResponse> RemoveStock(
         InventoryMovementRequest request,
         CancellationToken cancellationToken) =>

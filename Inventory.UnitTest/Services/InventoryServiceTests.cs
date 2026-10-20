@@ -65,17 +65,19 @@ public sealed class InventoryServiceTests
     {
         repository.Setup(item => item.GetProductAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ProductResponse(1, "Item", 1, "General", int.MaxValue, false));
+        repository.Setup(item => item.ApplyMovementAsync(1, InventoryMovementType.Add, 1, actor, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InventoryException(409, "quantity_overflow", "The resulting inventory quantity exceeds the supported limit."));
 
         var exception = await Assert.ThrowsAsync<InventoryException>(
             () => service.AddStockAsync(new InventoryMovementRequest(1, 1), actor, CancellationToken.None));
 
         Assert.AreEqual("quantity_overflow", exception.Code);
         repository.Verify(item => item.ApplyMovementAsync(
-            It.IsAny<int>(),
-            It.IsAny<string>(),
-            It.IsAny<int>(),
-            It.IsAny<ActorIdentity>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+            1,
+            InventoryMovementType.Add,
+            1,
+            actor,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]

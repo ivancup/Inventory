@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.Api.Controllers;
 
+/// <summary>Exposes authenticated, paginated audit-log queries.</summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = "InventoryWrite")]
 [Route("api/v1/audit-logs")]
 public sealed class AuditLogsController(IInventoryService inventoryService) : ControllerBase
 {
+    /// <summary>Returns a page of audit records.</summary>
     [HttpGet]
     public Task<PagedResponse<AuditLogResponse>> GetAuditLogs(
         [FromQuery] int page = 1,

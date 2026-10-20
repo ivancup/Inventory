@@ -268,8 +268,13 @@ public sealed class InventoryRepository(
             throw new InventoryException(409, "insufficient_stock", "The requested quantity exceeds available stock.");
         }
 
+        if (type == InventoryMovementType.Add && current.Quantity > int.MaxValue - quantity)
+        {
+            throw new InventoryException(409, "quantity_overflow", "The resulting inventory quantity exceeds the supported limit.");
+        }
+
         var nextQuantity = type == InventoryMovementType.Add
-            ? checked(current.Quantity + quantity)
+            ? current.Quantity + quantity
             : current.Quantity - quantity;
         await connection.ExecuteAsync(
             new CommandDefinition(
